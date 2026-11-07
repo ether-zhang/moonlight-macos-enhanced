@@ -16,7 +16,7 @@
 
 </div>
 
-> **个人分支 `codex/rc7-personal-sleepfix`**：基于 `v1.3.9-rc.7`（`c4dd84daa6440468f4e9a2e48f8c482f24bec965`）。不打包 AWDL 特权助手；Mac 休眠时断开串流、取消自动重连，并保留主机应用，唤醒后手动重连。依赖使用 OpenSSL 3.6.5、FFmpeg 6.1.6。构建方法见[从源码构建](#从源码构建)。下方的下载与更新链接指向上游版本，不包含此分支的定制改动。
+> **个人分支 `fix/rc7-personal-sleep`**：基于 `v1.3.9-rc.7`（`c4dd84daa6440468f4e9a2e48f8c482f24bec965`）。不打包 AWDL 特权助手；Mac 休眠时断开串流、取消自动重连，并保留主机应用，唤醒后手动重连。依赖使用 OpenSSL 3.6.5、FFmpeg 6.1.6。构建方法见[从源码构建](#从源码构建)。下方的下载与更新链接指向上游版本，不包含此分支的定制改动。
 
 **目录**：[当前版本](#当前版本) · [快速开始](#快速开始) · [功能概览](#功能概览) · [截图](#截图) · [主机端兼容性](#主机端兼容性) · [安装](#安装) · [视频与 HDR](#视频与-hdr) · [音频](#音频) · [键盘、鼠标与触控板](#键盘鼠标与触控板) · [手柄](#手柄) · [控制中心](#串流中的控制中心) · [Foundation Sunshine 协作](#foundation-sunshine-协作) · [连接与诊断](#连接与诊断) · [更新](#更新) · [从源码构建](#从源码构建) · [问题反馈](#问题反馈)
 
@@ -251,7 +251,7 @@ USB 映射和主机文件的页面会显示主机能力及不可用原因。
 本分支需要完整的 Xcode 27.x（已验证 Xcode 27.2），并完成首次启动初始化。构建脚本默认编译当前 Mac 的架构。
 
 ```bash
-git clone --recursive --branch codex/rc7-personal-sleepfix https://github.com/ether-zhang/moonlight-macos-enhanced.git
+git clone --recursive --branch fix/rc7-personal-sleep https://github.com/ether-zhang/moonlight-macos-enhanced.git
 cd moonlight-macos-enhanced
 
 brew install cmake meson ninja nasm pkgconf
