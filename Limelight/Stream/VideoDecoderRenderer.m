@@ -388,6 +388,40 @@ static NSString *MLFormatDescriptionSummary(CMFormatDescriptionRef desc)
             atomNames];
 }
 
+// Read the coded depth independently of the format selected during negotiation
+// and the output pixel buffer requested from VideoToolbox. Zero means unknown.
+static int MLCodedVideoBitDepth(CMVideoFormatDescriptionRef description)
+{
+    if (description == NULL) {
+        return 0;
+    }
+
+    // Core Media builds hvcC from the received VPS/SPS/PPS. Its fixed header
+    // carries bit_depth_luma_minus8 and bit_depth_chroma_minus8 from the SPS.
+    CFTypeRef atoms = CMFormatDescriptionGetExtension(description,
+        kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms);
+    if (atoms != NULL && CFGetTypeID(atoms) == CFDictionaryGetTypeID()) {
+        CFTypeRef record = CFDictionaryGetValue((CFDictionaryRef)atoms, CFSTR("hvcC"));
+        if (record != NULL && CFGetTypeID(record) == CFDataGetTypeID() &&
+            CFDataGetLength((CFDataRef)record) >= 23) {
+            const UInt8 *bytes = CFDataGetBytePtr((CFDataRef)record);
+            if (bytes[0] == 1) {
+                return MAX(8 + (bytes[17] & 7), 8 + (bytes[18] & 7));
+            }
+        }
+    }
+
+    // The AV1 format description records the depth parsed by its CBS reader.
+    CFTypeRef bits = CMFormatDescriptionGetExtension(description, CFSTR("BitsPerComponent"));
+    int depth = 0;
+    if (bits != NULL && CFGetTypeID(bits) == CFNumberGetTypeID() &&
+        CFNumberGetValue((CFNumberRef)bits, kCFNumberIntType, &depth) &&
+        depth >= 8 && depth <= 16) {
+        return depth;
+    }
+    return 0;
+}
+
 // Logs what VideoToolbox produced: the delivered pixel format and every
 // propagating attachment key. Call before any attachment is rewritten.
 static void MLLogDecodedBufferAttachments(CVImageBufferRef imageBuffer)
@@ -3657,11 +3691,14 @@ void decompressionOutputCallback(void *decompressionOutputRefCon, void *sourceFr
     if (_lastLoggedDecodedPixelFormat != pixelFormat || _lastLoggedDecodedPlaneCount != planeCount) {
         _lastLoggedDecodedPixelFormat = pixelFormat;
         _lastLoggedDecodedPlaneCount = planeCount;
-        Log(LOG_I, @"[video] Decoded image buffer format=0x%X planes=%zu renderer=%@ hdr=%d",
+        int codedDepth = MLCodedVideoBitDepth(formatDesc);
+        Log(LOG_I, @"[video] Decoded image buffer format=0x%X planes=%zu renderer=%@ hdr=%d codedBitDepth=%@ negotiated10Bit=%d",
             (unsigned int)pixelFormat,
             planeCount,
             [self activeRendererModeName:_activeRendererMode],
-            _enableHdr ? 1 : 0);
+            _enableHdr ? 1 : 0,
+            codedDepth > 0 ? [NSString stringWithFormat:@"%d", codedDepth] : @"unknown",
+            (videoFormat & VIDEO_FORMAT_MASK_10BIT) ? 1 : 0);
     }
 
     os_unfair_lock_lock(&_frameStoreLock);

@@ -123,6 +123,7 @@ Settings that apply to one renderer only appear while it is selected. Image enha
 ### HDR and Colour
 
 - `10-bit SDR` is a separate option and does not require HDR; the host and decoder must support the 10-bit format.
+- This personal branch fixes the SDR10 encoding request. Keep the host display in SDR; its capture path still determines source precision. The log's `codedBitDepth` is read from the coded format configuration, while `Decoded image buffer format` describes the decoder output. Check them separately: a negotiated name or output buffer format alone does not establish 10-bit source precision.
 - `Dynamic HDR Preference` offers Automatic, Dolby Vision, HDR10+, or HDR10 only. The performance overlay shows the format that was actually negotiated and the reason for any fallback.
 - Dolby Vision 8.1 / 8.4 and HDR10+ provide capability probing, negotiation, and safe fallback; the final output depends on the system, hardware, and display path. Public macOS APIs do not guarantee that HDR10+ dynamic metadata is preserved, in which case base HDR output is used.
 - With HDR on and no manual luminance values, the client reports luminance from the current screen. When the host toggles HDR during a stream, the picture follows.
@@ -262,12 +263,15 @@ The script uses pinned Git submodules and Swift packages, verifies the dependenc
 
 Outputs are in `dist/personal/`: `MoonlightEnhanced.app`, a ZIP, and `SHA256SUMS`. Local ad-hoc signing needs no developer Team; the script does not install an app or helper. Grant macOS permissions as needed on first launch. The Apple Silicon build has been verified.
 
-Run the sleep and window cleanup regression checks with:
+Run the SDR10 request, sleep, and window cleanup regression checks with:
 
 ```bash
+python3 tests/sdr10/run.py
 python3 tests/system-sleep/run.py
 python3 tests/window-cleanup/run.py
 ```
+
+`python3 tests/sdr10/run.py --native-probe` also encodes and decodes synthetic 8/10-bit HEVC frames using local VideoToolbox, verifies the coded-depth reader, and prints the native decoder output format. This optional check needs a local encoder supporting those formats. It does not connect to a streaming host or capture the screen.
 
 The sleep test runs extracted production methods with simulated notifications and does not put the Mac to sleep. Actual lid closure and host audio routing still need validation during streaming. The in-app updater still connects to upstream; installing an upstream build replaces these custom changes.
 

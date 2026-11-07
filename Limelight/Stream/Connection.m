@@ -89,9 +89,13 @@ static const NSUInteger kEnhancedEQMaxBands = 32;
 static const float kEnhancedBinauralInputGain = 0.8f;
 #define ML_ENHANCED_SURROUND_MAX_CHANNELS 12
 
-static int MLResolvedDynamicRangeModeForPreference(BOOL hdrEnabled, int hdrTransferFunction) {
+static int MLResolvedDynamicRangeModeForPreference(BOOL hdrEnabled, BOOL tenBitSdrEnabled, int hdrTransferFunction) {
     if (!hdrEnabled) {
-        return DYNAMIC_RANGE_MODE_SDR;
+        // Sunshine also uses this wire field to select the encoder bit depth.
+        // Mode 0 selects 8-bit even if supportedVideoFormats advertises Main10.
+        // Request the interoperable 10-bit mode for SDR10 without enabling the
+        // HTTP hdrMode flag or advertising dynamic HDR metadata.
+        return tenBitSdrEnabled ? DYNAMIC_RANGE_MODE_HDR10_PQ : DYNAMIC_RANGE_MODE_SDR;
     }
 
     switch (hdrTransferFunction) {
@@ -4823,12 +4827,13 @@ void ClClipboardDataReceived(const uint8_t *data, uint32_t length)
     }
 
     _streamConfig.supportedVideoFormats = supportedVideoFormats;
-    Log(LOG_I, @"[diag] Codec preference resolved: pref=%d av1=%d(software=%d) hevc=%d hdr=%d yuv444=%d formats=0x%X",
+    Log(LOG_I, @"[diag] Codec preference resolved: pref=%d av1=%d(software=%d) hevc=%d hdr=%d tenBitSdr=%d yuv444=%d formats=0x%X",
         codecPreference,
         av1Supported ? 1 : 0,
         av1SoftwareOnly ? 1 : 0,
         hevcSupported ? 1 : 0,
-        (config.enableHdr || config.enable10BitSdr) ? 1 : 0,
+        config.enableHdr ? 1 : 0,
+        config.enable10BitSdr ? 1 : 0,
         enableYuv444 ? 1 : 0,
         supportedVideoFormats);
 #else
@@ -4841,7 +4846,7 @@ void ClClipboardDataReceived(const uint8_t *data, uint32_t length)
 #endif
 
     _streamConfig.dynamicRangeMode =
-        MLResolvedDynamicRangeModeForPreference(config.enableHdr, config.hdrTransferFunction);
+        MLResolvedDynamicRangeModeForPreference(config.enableHdr, config.enable10BitSdr, config.hdrTransferFunction);
     _streamConfig.dynamicHdrCaps = 0;
     _streamConfig.dolbyVisionDirectSurface = 0;
     // 0 automatic, 1 Dolby Vision, 2 HDR10+, 3 HDR10 only (host's dynamic_hdr_preference_e).

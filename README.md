@@ -123,6 +123,7 @@
 ### HDR 与色彩
 
 - `10-bit SDR` 是独立选项，不需要开启 HDR；主机与解码器需支持对应的 10-bit 格式。
+- 此个人分支修正了 SDR10 的编码请求。使用时主机显示器应保持 SDR；主机采集链路仍决定源头精度。日志中的 `codedBitDepth` 表示从码流配置读取的位深，`Decoded image buffer format` 表示解码输出格式，两者可分别核对，不能仅凭协商名称或输出缓冲区断定源头是 10-bit。
 - `动态 HDR 偏好` 可选自动、Dolby Vision、HDR10+ 或仅 HDR10。性能浮窗会显示实际协商到的格式，以及回退时的原因。
 - Dolby Vision 8.1 / 8.4 与 HDR10+ 提供能力探测、协商与安全回退，最终输出取决于系统、硬件和显示链路。macOS 的公共接口不能保证完整保留 HDR10+ 动态元数据，此时使用基础 HDR 输出。
 - 开启 HDR 且未手动填写亮度参数时，客户端按当前屏幕自动上报亮度；主机在串流中开关 HDR，画面会随之切换。
@@ -262,12 +263,15 @@ scripts/build_personal.sh
 
 产物位于 `dist/personal/`：`MoonlightEnhanced.app`、ZIP 和 `SHA256SUMS`。使用本地 ad-hoc 签名，无需开发者 Team；脚本不会安装应用或助手。首次运行仍需按 macOS 提示授权。当前已验证 Apple Silicon 构建。
 
-休眠逻辑和窗口清理回归检查：
+SDR10 请求、休眠逻辑和窗口清理回归检查：
 
 ```bash
+python3 tests/sdr10/run.py
 python3 tests/system-sleep/run.py
 python3 tests/window-cleanup/run.py
 ```
+
+`python3 tests/sdr10/run.py --native-probe` 还会用本机 VideoToolbox 编码、解码合成的 8/10-bit HEVC 帧，校验码流位深的读取并打印原生解码输出格式。这个可选检查需要本机编码器支持对应格式，不连接串流主机、不采集屏幕。
 
 休眠测试运行提取的生产方法和模拟通知，不会让 Mac 真正休眠；实际合盖与主机音频路由仍需在串流环境中验证。应用内更新仍连接上游，安装上游版本会覆盖这些定制改动。
 
