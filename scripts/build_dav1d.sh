@@ -11,18 +11,32 @@ set -euo pipefail
 VERSION=1.5.4
 SHA256=686616b7c69eb88d44459391ab25cac13b6647a3b288835c5784e71c1514a5c5
 MIN_MACOS=12.0
+read -r -a build_archs <<< "${ARCHS:-arm64 x86_64}"
+for arch in "${build_archs[@]}"; do
+  case "$arch" in arm64|x86_64) ;; *) echo "unsupported architecture: $arch" >&2; exit 1 ;; esac
+done
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT="$ROOT/xcframeworks/dav1d"
 
 if [ -f "$OUT/VERSION" ] && [ "$(cat "$OUT/VERSION")" = "$VERSION" ] && [ -f "$OUT/lib/libdav1d.a" ]; then
-  echo "dav1d $VERSION is already built"
-  exit 0
+  existing_archs=" $(lipo -archs "$OUT/lib/libdav1d.a" 2>/dev/null || true) "
+  complete=1
+  for arch in "${build_archs[@]}"; do
+    [[ "$existing_archs" == *" $arch "* ]] || complete=0
+  done
+  if [[ "$complete" == 1 ]]; then
+    echo "dav1d $VERSION is already built for ${build_archs[*]}"
+    exit 0
+  fi
 fi
 
-for tool in meson ninja nasm; do
+for tool in meson ninja; do
   command -v "$tool" >/dev/null || { echo "missing $tool (brew install meson ninja nasm)"; exit 1; }
 done
+if [[ " ${build_archs[*]} " == *' x86_64 '* ]]; then
+  command -v nasm >/dev/null || { echo 'missing nasm (brew install nasm)'; exit 1; }
+fi
 
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
@@ -33,7 +47,8 @@ echo "$SHA256  dav1d.tar.xz" | shasum -a 256 -c -
 tar -xf dav1d.tar.xz
 SRC="$WORK/dav1d-$VERSION"
 
-for arch in arm64 x86_64; do
+libraries=()
+for arch in "${build_archs[@]}"; do
   cat > "$WORK/$arch.ini" <<INI
 [binaries]
 c = ['clang', '-arch', '$arch']
@@ -55,11 +70,12 @@ INI
     -Denable_tools=false -Denable_tests=false -Denable_examples=false -Denable_docs=false \
     -Dbitdepths=8,16
   ninja -C "$WORK/build-$arch"
+  libraries+=("$WORK/build-$arch/src/libdav1d.a")
 done
 
 rm -rf "$OUT"
 mkdir -p "$OUT/lib" "$OUT/include/dav1d"
-lipo -create "$WORK/build-arm64/src/libdav1d.a" "$WORK/build-x86_64/src/libdav1d.a" -output "$OUT/lib/libdav1d.a"
+lipo -create "${libraries[@]}" -output "$OUT/lib/libdav1d.a"
 cp "$SRC"/include/dav1d/*.h "$OUT/include/dav1d/"
 cp "$SRC/COPYING" "$OUT/COPYING"
 echo "$VERSION" > "$OUT/VERSION"

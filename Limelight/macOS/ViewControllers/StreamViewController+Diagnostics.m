@@ -1694,7 +1694,7 @@ static NSString *MLDynamicHdrFallbackDisplayName(int fallback) {
 }
 
 - (void)attemptReconnectWithReason:(NSString *)reason {
-    if (!self.shouldAttemptReconnect) {
+    if (self.systemSleepDisconnectRequested || !self.shouldAttemptReconnect) {
         return;
     }
     if (self.reconnectInProgress) {

@@ -16,6 +16,8 @@
 
 </div>
 
+> **个人分支 `codex/rc7-personal-sleepfix`**：基于 `v1.3.9-rc.7`（`c4dd84daa6440468f4e9a2e48f8c482f24bec965`）。不打包 AWDL 特权助手；Mac 休眠时断开串流、取消自动重连，并保留主机应用，唤醒后手动重连。依赖使用 OpenSSL 3.6.5、FFmpeg 6.1.6。构建方法见[从源码构建](#从源码构建)。下方的下载与更新链接指向上游版本，不包含此分支的定制改动。
+
 **目录**：[当前版本](#当前版本) · [快速开始](#快速开始) · [功能概览](#功能概览) · [截图](#截图) · [主机端兼容性](#主机端兼容性) · [安装](#安装) · [视频与 HDR](#视频与-hdr) · [音频](#音频) · [键盘、鼠标与触控板](#键盘鼠标与触控板) · [手柄](#手柄) · [控制中心](#串流中的控制中心) · [Foundation Sunshine 协作](#foundation-sunshine-协作) · [连接与诊断](#连接与诊断) · [更新](#更新) · [从源码构建](#从源码构建) · [问题反馈](#问题反馈)
 
 ## 当前版本
@@ -246,23 +248,28 @@ USB 映射和主机文件的页面会显示主机能力及不可用原因。
 
 ## 从源码构建
 
+本分支需要完整的 Xcode 27.x（已验证 Xcode 27.2），并完成首次启动初始化。构建脚本默认编译当前 Mac 的架构。
+
 ```bash
-git clone --recursive https://github.com/skyhua0224/moonlight-macos-enhanced.git
+git clone --recursive --branch codex/rc7-personal-sleepfix https://github.com/ether-zhang/moonlight-macos-enhanced.git
 cd moonlight-macos-enhanced
 
-curl -L -o xcframeworks.zip "https://github.com/coofdy/moonlight-mobile-deps/releases/download/latest/moonlight-apple-xcframeworks.zip"
-unzip -o xcframeworks.zip -d xcframeworks/
-
-# AV1 软件解码用的 dav1d（需要 meson、ninja、nasm）
-brew install meson ninja nasm
-scripts/build_dav1d.sh
+brew install cmake meson ninja nasm pkgconf
+scripts/build_personal.sh
 ```
 
-然后：
-1. 用 Xcode 打开 `Moonlight.xcodeproj`
-2. 在 **Signing & Capabilities** 中改成你自己的 Team
-3. 按需修改 Bundle Identifier
-4. 选择 **Moonlight for macOS** scheme 后运行
+脚本使用锁定的 Git 子模块和 Swift 包，校验预编译依赖压缩包的 SHA-256 及 Opus/SDL2 框架的签名，并从固定提交构建 FFmpeg、从校验过的源码构建 dav1d。预编译依赖的上游 `latest` 下载地址如果内容变化，校验会失败，需要重新审查后更新哈希。
+
+产物位于 `dist/personal/`：`MoonlightEnhanced.app`、ZIP 和 `SHA256SUMS`。使用本地 ad-hoc 签名，无需开发者 Team；脚本不会安装应用或助手。首次运行仍需按 macOS 提示授权。当前已验证 Apple Silicon 构建。
+
+休眠逻辑和窗口清理回归检查：
+
+```bash
+python3 tests/system-sleep/run.py
+python3 tests/window-cleanup/run.py
+```
+
+休眠测试运行提取的生产方法和模拟通知，不会让 Mac 真正休眠；实际合盖与主机音频路由仍需在串流环境中验证。应用内更新仍连接上游，安装上游版本会覆盖这些定制改动。
 
 ## 问题反馈
 

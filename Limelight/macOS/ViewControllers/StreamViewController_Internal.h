@@ -369,6 +369,7 @@ static const NSTimeInterval MLStatsOverlayRefreshIntervalSec = 0.5;
 @property (atomic) BOOL stopStreamInProgress;
 
 @property (nonatomic) BOOL shouldAttemptReconnect;
+@property (atomic) BOOL systemSleepDisconnectRequested;
 @property (nonatomic) NSInteger reconnectAttemptCount;
 @property (nonatomic) BOOL reconnectInProgress;
 @property (atomic) NSUInteger activeStreamGeneration;
@@ -533,6 +534,7 @@ static const NSTimeInterval MLStatsOverlayRefreshIntervalSec = 0.5;
 @property (nonatomic) BOOL globalInactivePointerInsideStreamView;
 
 @property (nonatomic, strong) id activeSpaceDidChangeObserver;
+@property (nonatomic, strong) id systemWillSleepObserver;
 @property (nonatomic, strong) NSTimer *clipboardMonitorTimer;
 @property (nonatomic, strong) Connection *clipboardRuntimeConnection;
 @property (nonatomic, strong) MLAdaptiveBitrateController *adaptiveBitrateController;
@@ -571,6 +573,10 @@ static const NSTimeInterval MLStatsOverlayRefreshIntervalSec = 0.5;
 - (BOOL)useSystemControllerDriver;
 - (void)viewDidLoad;
 - (void)handleSessionDisconnectRequest:(NSNotification *)note;
+- (void)installSystemSleepObserver;
+- (void)tearDownSystemSleepObserver;
+- (void)handleSystemWillSleep:(NSNotification *)notification;
+- (BOOL)shouldQuitHostAppAfterStream;
 - (void)beginStopStreamIfNeededWithReason:(NSString *)reason;
 - (void)beginStopStreamIfNeededWithReason:(NSString *)reason completion:(void (^)(void))completion;
 - (void)tearDownStreamLifecycleObserversAndTimers;

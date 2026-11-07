@@ -1058,10 +1058,8 @@ class SettingsClass: NSObject {
   }
 
   @objc static func awdlStabilityHelperEnabled() -> Bool {
-    if UserDefaults.standard.object(forKey: SettingsModel.awdlStabilityHelperEnabledKey) != nil {
-      return UserDefaults.standard.bool(forKey: SettingsModel.awdlStabilityHelperEnabledKey)
-    }
-    return SettingsModel.defaultAwdlStabilityHelperEnabled
+    // This personal RC7 build does not use or install the AWDL helper.
+    return false
   }
 
   /// Applies the stored recording settings to the logger. Called once at launch.

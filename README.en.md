@@ -16,6 +16,8 @@
 
 </div>
 
+> **Personal branch `codex/rc7-personal-sleepfix`**: based on `v1.3.9-rc.7` (`c4dd84daa6440468f4e9a2e48f8c482f24bec965`). It excludes the AWDL privileged helper and disconnects on Mac system sleep, cancels automatic reconnect, and keeps the host app running. Reconnect manually after waking. Dependencies use OpenSSL 3.6.5 and FFmpeg 6.1.6. See [Build from Source](#build-from-source). Download and update links below point to upstream builds, which do not include these changes.
+
 **Contents**: [Current Release](#current-release) · [Quick Start](#quick-start) · [Features](#features) · [Screenshots](#screenshots) · [Host Compatibility](#host-compatibility) · [Installation](#installation) · [Video and HDR](#video-and-hdr) · [Audio](#audio) · [Keyboard, Mouse, and Trackpad](#keyboard-mouse-and-trackpad) · [Controllers](#controllers) · [Control Center](#in-stream-control-center) · [Foundation Sunshine Integration](#foundation-sunshine-integration) · [Connectivity and Diagnostics](#connectivity-and-diagnostics) · [Updates](#updates) · [Build from Source](#build-from-source) · [Reporting Issues](#reporting-issues)
 
 ## Current Release
@@ -246,23 +248,28 @@ The USB Mapping and Host Files pages show the host's capabilities and why someth
 
 ## Build from Source
 
+This branch needs the full Xcode 27.x installation (tested with Xcode 27.2), including its first-launch setup. The script builds for the current Mac's architecture by default.
+
 ```bash
-git clone --recursive https://github.com/skyhua0224/moonlight-macos-enhanced.git
+git clone --recursive --branch codex/rc7-personal-sleepfix https://github.com/ether-zhang/moonlight-macos-enhanced.git
 cd moonlight-macos-enhanced
 
-curl -L -o xcframeworks.zip "https://github.com/coofdy/moonlight-mobile-deps/releases/download/latest/moonlight-apple-xcframeworks.zip"
-unzip -o xcframeworks.zip -d xcframeworks/
-
-# dav1d, for AV1 software decoding (needs meson, ninja, nasm)
-brew install meson ninja nasm
-scripts/build_dav1d.sh
+brew install cmake meson ninja nasm pkgconf
+scripts/build_personal.sh
 ```
 
-Then:
-1. Open `Moonlight.xcodeproj` in Xcode
-2. Set your own Team in **Signing & Capabilities**
-3. Adjust the Bundle Identifier if needed
-4. Run the **Moonlight for macOS** scheme
+The script uses pinned Git submodules and Swift packages, verifies the dependency archive's SHA-256 and the Opus/SDL2 framework signatures, and builds FFmpeg from a pinned commit and dav1d from verified source. If the upstream `latest` archive changes, verification fails until the new archive is reviewed and its hash updated.
+
+Outputs are in `dist/personal/`: `MoonlightEnhanced.app`, a ZIP, and `SHA256SUMS`. Local ad-hoc signing needs no developer Team; the script does not install an app or helper. Grant macOS permissions as needed on first launch. The Apple Silicon build has been verified.
+
+Run the sleep and window cleanup regression checks with:
+
+```bash
+python3 tests/system-sleep/run.py
+python3 tests/window-cleanup/run.py
+```
+
+The sleep test runs extracted production methods with simulated notifications and does not put the Mac to sleep. Actual lid closure and host audio routing still need validation during streaming. The in-app updater still connects to upstream; installing an upstream build replaces these custom changes.
 
 ## Reporting Issues
 

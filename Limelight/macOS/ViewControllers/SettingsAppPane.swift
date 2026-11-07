@@ -72,7 +72,6 @@ struct AppView: View {
             NotificationCenter.default.post(name: Notification.Name("MoonlightDiscoveryPreferencesChanged"), object: nil)
           }
         ))
-        ToggleCell(title: "AWDL Stability Helper", hintKey: "AWDL Stability Helper detail", boolBinding: $settingsModel.awdlStabilityHelperEnabled)
         SettingsRow(title: "Input Monitoring") {
           Button(languageManager.localize("Open Settings")) {
             InputMonitoringPermissionManager.sharedManager.openSystemPreferences()

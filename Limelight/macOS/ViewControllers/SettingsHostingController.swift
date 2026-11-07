@@ -102,13 +102,11 @@ private enum WelcomePermissionsState {
 
     let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
     let inputState = InputMonitoringPermissionManager.sharedManager.authorizationState
-    let awdlState = AwdlHelperManager.sharedManager.authorizationState
     let needsMic = micStatus != .authorized
     let needsInput = inputState != .unsupported &&
       inputState != .granted &&
       inputState != .grantedNeedsReentry
-    let needsAwdl = awdlState == .notDetermined || awdlState == .failed
-    return needsMic || needsInput || needsAwdl
+    return needsMic || needsInput
   }
 }
 
@@ -157,15 +155,6 @@ private struct WelcomePermissionsView: View {
               action: inputAction
             )
           }
-
-          permissionRow(
-            title: "AWDL Stability Helper",
-            subtitle: "Welcome AWDL detail",
-            stateLabel: awdlStatusText,
-            isGranted: awdlGrantedState,
-            actionTitle: awdlActionTitle,
-            action: awdlAction
-          )
 
           permissionRow(
             title: "Microphone",

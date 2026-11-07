@@ -493,6 +493,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
     self.lastOptionUncaptureAtMs = 0;
     self.stopStreamInProgress = NO;
     self.shouldAttemptReconnect = YES;
+    self.systemSleepDisconnectRequested = NO;
     self.reconnectAttemptCount = 0;
     self.reconnectInProgress = NO;
     self.connectWatchdogToken = 0;
@@ -523,6 +524,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
     [self loadPersistedFullscreenControlBallPlacement];
     
     self.awdlSessionOwnerID = NSUUID.UUID.UUIDString;
+    [self installSystemSleepObserver];
     [self prepareForStreaming];
 
     __weak typeof(self) weakSelf = self;
@@ -780,6 +782,50 @@ highFreqMotor:(unsigned short)highFreqMotor {
 
     // Programmatic disconnect requests should not show a confirmation alert.
     [self requestStreamCloseWithSource:@"session-manager-request-legacy"];
+}
+
+- (void)installSystemSleepObserver {
+    if (self.systemWillSleepObserver != nil) {
+        return;
+    }
+    __weak typeof(self) weakSelf = self;
+    self.systemWillSleepObserver = [NSWorkspace.sharedWorkspace.notificationCenter
+        addObserverForName:NSWorkspaceWillSleepNotification
+                    object:nil
+                     queue:NSOperationQueue.mainQueue
+                usingBlock:^(NSNotification *notification) {
+                    [weakSelf handleSystemWillSleep:notification];
+                }];
+}
+
+- (void)tearDownSystemSleepObserver {
+    if (self.systemWillSleepObserver != nil) {
+        [NSWorkspace.sharedWorkspace.notificationCenter removeObserver:self.systemWillSleepObserver];
+        self.systemWillSleepObserver = nil;
+    }
+}
+
+- (void)handleSystemWillSleep:(NSNotification *)notification {
+    if (self.systemSleepDisconnectRequested) {
+        return;
+    }
+    self.systemSleepDisconnectRequested = YES;
+    Log(LOG_I, @"[power] System sleep requested; disconnecting stream without automatic resume");
+
+    // Cancel before starting teardown so an in-flight reconnect cannot restart
+    // the session when the Mac wakes. Keep the host application running.
+    [self.streamOpQueue cancelAllOperations];
+    [self cancelPendingReconnectForUserExitWithReason:@"system-sleep"];
+    [self markUserInitiatedDisconnectAndSuppressWarningsForSeconds:5.0 reason:@"system-sleep"];
+    [self.hidSupport releaseAllModifierKeys];
+    [self uncaptureMouseWithCode:@"MUC304" reason:@"system-sleep"];
+    [self allowDisplaySleep];
+    [self requestStreamCloseWithSource:@"system-sleep"];
+}
+
+- (BOOL)shouldQuitHostAppAfterStream {
+    return !self.systemSleepDisconnectRequested &&
+           [SettingsClass quitAppAfterStreamFor:self.app.host.uuid];
 }
 
 - (void)beginStopStreamIfNeededWithReason:(NSString *)reason {
@@ -1181,6 +1227,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
 
 - (void)tearDownStreamLifecycleObserversAndTimers {
     NSNotificationCenter *defaultCenter = [NSNotificationCenter defaultCenter];
+    [self tearDownSystemSleepObserver];
 
     // Never leave the system gesture filter running once the stream is stopping or gone.
     self.precisionTouchpadModeForGestureBlock = 0;
@@ -1303,6 +1350,9 @@ highFreqMotor:(unsigned short)highFreqMotor {
 #pragma mark - Streaming Operations
 
 - (void)prepareForStreaming {
+    if (self.systemSleepDisconnectRequested) {
+        return;
+    }
     const uint64_t startupBeginMs = LiGetMillis();
     self.startupSummaryLogged = NO;
     [self stopStreamHealthDiagnostics];
@@ -2286,7 +2336,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
         
         // If it was user initiated, just close normally.
         if (self.disconnectWasUserInitiated) {
-             if ([SettingsClass quitAppAfterStreamFor:self.app.host.uuid]) {
+             if ([self shouldQuitHostAppAfterStream]) {
                  [self.delegate quitApp:self.app completion:nil];
              } else {
                  [self closeWindowFromMainQueueWithMessage:nil];
@@ -2301,7 +2351,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
             Log(LOG_W, @"[diag] Closing stream window after non-zero termination code: %d", errorCode);
         }
 
-        if ([SettingsClass quitAppAfterStreamFor:self.app.host.uuid]) {
+        if ([self shouldQuitHostAppAfterStream]) {
             [self.delegate quitApp:self.app completion:nil];
         } else {
             [self closeWindowFromMainQueueWithMessage:nil];

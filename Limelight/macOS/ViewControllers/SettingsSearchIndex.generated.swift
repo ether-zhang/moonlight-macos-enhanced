@@ -199,7 +199,6 @@ extension SettingsSearchIndex {
     SettingsSearchEntry(id: "app/Application/Show Performance Overlay", pane: .app, kind: .row, sectionKey: "Application", titleKey: "Show Performance Overlay", detailKey: nil, keywords: []),
     SettingsSearchEntry(id: "app/Application/Show Connection Warnings", pane: .app, kind: .row, sectionKey: "Application", titleKey: "Show Connection Warnings", detailKey: nil, keywords: []),
     SettingsSearchEntry(id: "app/Network Compatibility/Automatically Discover New Hosts", pane: .app, kind: .row, sectionKey: "Network Compatibility", titleKey: "Automatically Discover New Hosts", detailKey: nil, keywords: []),
-    SettingsSearchEntry(id: "app/Network Compatibility/AWDL Stability Helper", pane: .app, kind: .row, sectionKey: "Network Compatibility", titleKey: "AWDL Stability Helper", detailKey: "AWDL Stability Helper detail", keywords: []),
     SettingsSearchEntry(id: "app/Network Compatibility/Input Monitoring", pane: .app, kind: .row, sectionKey: "Network Compatibility", titleKey: "Input Monitoring", detailKey: nil, keywords: ["Open Settings"]),
     SettingsSearchEntry(id: "app/Network Compatibility/Microphone", pane: .app, kind: .row, sectionKey: "Network Compatibility", titleKey: "Microphone", detailKey: nil, keywords: ["Open Settings"]),
     SettingsSearchEntry(id: "app/Diagnostics/Recording Detail", pane: .app, kind: .row, sectionKey: "Diagnostics", titleKey: "Recording Detail", detailKey: "Recording Detail detail", keywords: ["Normal", "Detailed"]),
